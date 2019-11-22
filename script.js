@@ -1,23 +1,25 @@
+const userInput = document.querySelector(".user-input");
+const result = document.querySelector(".result");
+const inputBtns = document.querySelectorAll("[data-value]");
+const evalBtn = document.getElementById("eval");
+const clearBtn = document.getElementById("clear");
+const backspaceBtn = document.getElementById("backspace");
+
 // basic functions to operate on two numbers
 function addition(a, b) {
-    return +a + +b;
+    return Number(a) + Number(b);
 }
 
 function subtract(a, b) {
-    return +a - +b;
+    return Number(a) - Number(b);
 }
 
 function multiply(a, b) {
-    return +a * +b;
+    return Number(a) * Number(b);
 }
 
 function divide(a, b) {
-    // trying to divivde by zero alerts error
-    if (a == "0" || b == "0") {
-        alert("Can\'t Divide by Zero!");
-    } else {
-        return +a / +b;
-    }
+    return Number(a) / Number(b);
 }
 
 // performs correct operation based on operator and two numbers
@@ -33,42 +35,63 @@ function operate(operator, a, b) {
     }
 }
 
-// event listeners to populate display depending on what button was pressed
-const userInput = document.querySelector(".user-input");
-const result = document.querySelector(".result");
+// validate whether certain input should be added to the expression
+function validateInput(value) {
+    const reverseExpression = userInput.textContent.split("").reverse();
 
-let numberBtns = [];
-for (let i = 0; i < 10; i++) {
-    numberBtns[i] = document.getElementById(`${i}`);
-    numberBtns[i].addEventListener("click", () => userInput.textContent += `${i}`);
+    if (value === ".") {
+        const lastNum = reverseExpression.join("").split(/[-+x÷]/)[0];
+        if (lastNum.includes(".")) {
+            return false;
+        }
+    } else if (value === "÷" || value === "x" || value === "-" || value === "+") {
+        if (!reverseExpression[0].match(/\d/)) {
+            return false;
+        }
+    }
+    return true;
 }
 
-const decPoint = document.getElementById("dec-point");
-decPoint.addEventListener("click", () => {
-    userInput.textContent += "."
-});
+// add the user input to expression it's been successfully validated
+function populateDisplay(type, value) {
+    if (type === "input") {
+        if (validateInput(value)) {
+            userInput.textContent += value;
+        }
+    } else if (type === "result") {
+        result.textContent = value;
+    }
+}
 
-const div = document.getElementById("div");
-div.addEventListener("click", () => userInput.textContent += "÷");
+// reset both input and result to empty string
+function clearDisplay() {
+    userInput.textContent = "";
+    result.textContent = "";
+}
 
-const mul = document.getElementById("mul");
-mul.addEventListener("click", () => userInput.textContent += "x");
+// remove last character from expression
+function clearCharacter() {
+    let str = userInput.textContent;
+    str = str.substr(0, str.length - 1);
+    userInput.textContent = `${str}`;
+}
 
-const sub = document.getElementById("sub");
-sub.addEventListener("click", () => userInput.textContent += "-");
-
-const add = document.getElementById("add");
-add.addEventListener("click", () => userInput.textContent += "+");
-
-// evaluate expression if = button is clicked
-const eval = document.getElementById("eval");
-eval.addEventListener("click", evaluate);
-
+// evaluate expression
 function evaluate() {
     // split user input on operators to get numbers array
     let numbers = userInput.textContent.split(/[-+x÷]/);
     // match operator values to get operators array
     let operators = userInput.textContent.match(/[-+x÷]/g);
+
+    // remove leading zeroes
+    numbers = numbers.map(number => {
+        return Number(number).toString();
+    });
+
+    // if the expression doesn't have any operators i.e. it's just a single number then return that number as result
+    if (!operators) {
+        return populateDisplay("result", numbers[0]);
+    }
 
     // combine numbers and operators into expression array
     let expression = numbers;
@@ -78,6 +101,11 @@ function evaluate() {
         expression.splice(j, 0, operators[i]);
         i++;
         j = j + 2;
+    }
+
+    // throw divivde by zero error if user tries to divide by zero
+    if (expression.join("").includes("÷0")) {
+        return populateDisplay("result", "Can't divide by zero");
     }
 
     let operationResult = 0;
@@ -110,45 +138,70 @@ function evaluate() {
     }
 
     // round result to 2 decimal places and display
-    result.textContent = `${Math.round(operationResult * 100) / 100}`;
-    decPoint.disabled = false
+    return populateDisplay("result", Math.round(operationResult * 100) / 100);
 }
+
+// event listeners to populate display depending on what button was pressed
+inputBtns.forEach(btn => btn.addEventListener("click", () => populateDisplay("input", btn.dataset.value)));
+
+// evaluate expression if = button is clicked
+evalBtn.addEventListener("click", evaluate);
 
 // clear user input and result
-const clear = document.getElementById("clear");
-clear.addEventListener("click", clearDisplay);
-
-function clearDisplay() {
-    userInput.textContent = "";
-    result.textContent = "";
-}
+clearBtn.addEventListener("click", clearDisplay);
 
 // remove last character from user input
-const backspace = document.getElementById("backspace");
-backspace.addEventListener("click", clearCharacter);
-
-function clearCharacter() {
-    let str = userInput.textContent;
-    str = str.substr(0, str.length - 1);
-    userInput.textContent = `${str}`;
-    decPoint.disabled = false;
-}
+backspaceBtn.addEventListener("click", clearCharacter);
 
 // Keyboard Event Listeners
 window.addEventListener("keydown", function (e) {
-    e.preventDefault();
+    switch (e.key) {
+        case "0":
+        case "1":
+        case "2":
+        case "3":
+        case "4":
+        case "5":
+        case "6":
+        case "7":
+        case "8":
+        case "9":
+            e.preventDefault();
+            populateDisplay("input", Number(e.key))
+            break;
 
-    if (e.key.match(/[\d-+.]/)) {
-        userInput.textContent += `${e.key}`;
-    } else if (e.key == "*") {
-        userInput.textContent += "x";
-    } else if (e.key == "/") {
-        userInput.textContent += "÷";
-    } else if (e.key == "=") {
-        evaluate();
-    } else if (e.shiftKey && e.key == "Backspace") {
-        clearDisplay();
-    } else if (e.key == "Backspace") {
-        clearCharacter();
+        case "+":
+        case "-":
+        case ".":
+            e.preventDefault();
+            populateDisplay("input", e.key)
+            break;
+
+        case "*":
+            e.preventDefault();
+            populateDisplay("input", "x")
+            break;
+
+        case "/":
+            e.preventDefault();
+            populateDisplay("input", "÷")
+            break;
+
+        case "=":
+            e.preventDefault();
+            evaluate();
+            break;
+
+        case "Backspace":
+            e.preventDefault();
+            if (e.shiftKey) {
+                clearDisplay();
+                break;
+            }
+            clearCharacter();
+            break;
+
+        default:
+            break;
     }
 });
